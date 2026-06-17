@@ -1,0 +1,7 @@
+-- CreateTable
+CREATE TABLE "Configuracao" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "nomePainel" TEXT NOT NULL,
+    "dnsPrincipal" TEXT NOT NULL,
+    "criadoEm" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

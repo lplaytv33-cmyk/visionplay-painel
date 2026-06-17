@@ -1,0 +1,162 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Cliente {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  usuario      String   @unique
+  senha        String
+  whatsapp     String?
+  plano        String
+  conexoes     Int      @default(1)
+  vencimento   String
+  status       String   @default("Ativo")
+  revendedorId Int?
+  revendedor   String?
+  criadoEm     DateTime @default(now())
+}
+
+model Revendedor {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  usuario   String   @unique
+  senha     String
+  whatsapp  String?
+  nivel     String   @default("Nível 1")
+  creditos  Int      @default(0)
+  status    String   @default("Ativo")
+  criadoEm  DateTime @default(now())
+}
+
+model Canal {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  categoria String
+  url       String
+  logo      String?
+  epgId     String?
+  status    String   @default("Ativo")
+  criadoEm  DateTime @default(now())
+}
+
+model Filme {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  categoria String
+  url       String
+  capa      String?
+  tmdbId    Int?
+  sinopse   String?
+  ano       String?
+  nota      Float?
+  status    String   @default("Ativo")
+  criadoEm  DateTime @default(now())
+}
+
+model Serie {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  temporada Int
+  episodio  Int
+  categoria String
+  url       String
+  capa      String?
+  tmdbId    Int?
+  sinopse   String?
+  ano       String?
+  nota      Float?
+  status    String   @default("Ativo")
+  criadoEm  DateTime @default(now())
+}
+
+model Categoria {
+  id       Int      @id @default(autoincrement())
+  nome     String
+  tipo     String
+  status   String   @default("Ativa")
+  criadoEm DateTime @default(now())
+
+  @@unique([nome, tipo])
+}
+
+model Bouquet {
+  id       Int      @id @default(autoincrement())
+  nome     String   @unique
+  tipo     String
+  status   String   @default("Ativo")
+  criadoEm DateTime @default(now())
+}
+
+model HistoricoCliente {
+  id        Int      @id @default(autoincrement())
+  clienteId Int?
+  cliente   String
+  acao      String
+  detalhes  String
+  criadoEm  DateTime @default(now())
+}
+
+model HistoricoCredito {
+  id          Int      @id @default(autoincrement())
+  revendedorId Int?
+  revendedor   String
+  tipo         String
+  quantidade   Int
+  observacao   String?
+  criadoEm     DateTime @default(now())
+}
+
+model Configuracao {
+  id           Int      @id @default(autoincrement())
+  nomePainel   String   @default("VisionPlay")
+  nomeDono     String   @default("Administrador")
+  dnsPrincipal String   @default("localhost:3000")
+  logoPainel   String?
+  logoLogin    String?
+  usuarioAdmin String   @default("admin")
+  senhaAdmin   String   @default("admin123")
+  tmdbToken    String?
+  epgUrl       String?
+  criadoEm     DateTime @default(now())
+}
+
+model Aviso {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  mensagem  String
+  status    String   @default("Ativo")
+  criadoEm  DateTime @default(now())
+}
+
+model LogSistema {
+  id        Int      @id @default(autoincrement())
+  tipo      String
+  mensagem  String
+  criadoEm  DateTime @default(now())
+}
+
+model EpgPrograma {
+  id        Int      @id @default(autoincrement())
+  epgId     String
+  canalNome String
+  titulo    String
+  descricao String?
+  inicio    String
+  fim       String
+  criadoEm  DateTime @default(now())
+}
+model ConexaoAtiva {
+  id        Int      @id @default(autoincrement())
+  clienteId Int?
+  cliente   String
+  usuario   String
+  ip        String?
+  userAgent String?
+  status    String   @default("Online")
+  criadoEm  DateTime @default(now())
+}
