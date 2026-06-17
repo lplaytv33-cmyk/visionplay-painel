@@ -177,8 +177,23 @@ export default function ClientesPage() {
   }
 
   function copiar(texto) {
-    navigator.clipboard.writeText(texto);
-    alert("Link copiado!");
+    const area = document.createElement("textarea");
+    area.value = texto;
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    area.style.top = "0";
+    document.body.appendChild(area);
+    area.focus();
+    area.select();
+
+    try {
+      document.execCommand("copy");
+      alert("Link copiado com sucesso!");
+    } catch (err) {
+      alert("Não foi possível copiar. Selecione e copie manualmente.");
+    }
+
+    document.body.removeChild(area);
   }
 
   function gerarLinks(cliente) {
