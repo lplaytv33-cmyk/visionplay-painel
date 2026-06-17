@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-const DNS =
+const DNS_PADRAO =
   process.env.NEXT_PUBLIC_PANEL_URL ||
-  "localhost:3000";
+  "http://187.77.61.76";
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState([]);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [playlist, setPlaylist] = useState(null);
+  const [dnsPrincipal, setDnsPrincipal] = useState(DNS_PADRAO);
 
   async function carregarClientes() {
     const resposta = await fetch("/api/clientes");
@@ -20,7 +21,21 @@ export default function ClientesPage() {
 
   useEffect(() => {
     carregarClientes();
+    carregarConfiguracoes();
   }, []);
+
+  async function carregarConfiguracoes() {
+    try {
+      const resposta = await fetch("/api/configuracoes");
+      const dados = await resposta.json();
+
+      if (dados?.dnsPrincipal) {
+        setDnsPrincipal(dados.dnsPrincipal);
+      }
+    } catch (error) {
+      setDnsPrincipal(DNS_PADRAO);
+    }
+  }
 
   async function registrarHistorico(cliente, acao, detalhes) {
     await fetch("/api/historico-clientes/add", {
@@ -196,10 +211,19 @@ export default function ClientesPage() {
     document.body.removeChild(area);
   }
 
+  function normalizarBase(dns) {
+    let base = dns || DNS_PADRAO;
+    base = String(base).trim();
+
+    if (!base.startsWith("http://") && !base.startsWith("https://")) {
+      base = `http://${base}`;
+    }
+
+    return base.replace(/\/$/, "");
+  }
+
   function gerarLinks(cliente) {
-    const base = DNS.startsWith("http")
-      ? DNS
-      : `https://${DNS}`;
+    const base = normalizarBase(dnsPrincipal);
 
     return {
       m3uTs: `${base}/get.php?username=${cliente.usuario}&password=${cliente.senha}&type=m3u_plus&output=ts`,
@@ -474,7 +498,7 @@ function PlaylistModal({ cliente, links, copiar, fechar }) {
           <Info label="Usuário" value={cliente.usuario} />
           <Info label="Senha" value={cliente.senha} />
           <Info label="Vencimento" value={cliente.vencimento} />
-          <Info label="DNS" value={DNS} />
+          <Info label="DNS" value={dnsPrincipal} />
         </div>
 
         <div className="space-y-3">
