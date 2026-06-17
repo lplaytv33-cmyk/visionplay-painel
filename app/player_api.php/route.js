@@ -18,6 +18,18 @@ async function autenticar(username, password) {
   });
 }
 
+function categoriaId(nome) {
+  let hash = 0;
+  const texto = String(nome || "Sem Categoria");
+
+  for (let i = 0; i < texto.length; i++) {
+    hash = (hash << 5) - hash + texto.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return String(Math.abs(hash));
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
@@ -30,13 +42,8 @@ export async function GET(request) {
 
   if (!cliente) {
     return Response.json({
-      user_info: {
-        auth: 0,
-        status: "Disabled",
-      },
-      server_info: {
-        url: base,
-      },
+      user_info: { auth: 0, status: "Disabled" },
+      server_info: { url: base },
     });
   }
 
@@ -53,10 +60,10 @@ export async function GET(request) {
         active_cons: "0",
         created_at: Math.floor(new Date(cliente.criadoEm).getTime() / 1000).toString(),
         max_connections: String(cliente.conexoes || 1),
-        allowed_output_formats: ["m3u8", "ts"],
+        allowed_output_formats: ["m3u8", "ts", "mp4"],
       },
       server_info: {
-        url: base.replace("http://", "").replace("https://", ""),
+        url: request.headers.get("host"),
         port: request.headers.get("host")?.split(":")[1] || "80",
         https_port: "443",
         server_protocol: base.startsWith("https") ? "https" : "http",
@@ -69,104 +76,97 @@ export async function GET(request) {
   }
 
   if (action === "get_live_categories") {
-    const categorias = await prisma.canal.groupBy({
+    const cats = await prisma.canal.groupBy({
       by: ["categoria"],
       where: { status: "Ativo" },
+      orderBy: { categoria: "asc" },
     });
 
-    return Response.json(
-      categorias.map((c, index) => ({
-        category_id: String(index + 1),
-        category_name: c.categoria || "Canais",
-        parent_id: 0,
-      }))
-    );
+    return Response.json(cats.map((c) => ({
+      category_id: categoriaId(c.categoria),
+      category_name: c.categoria || "Canais",
+      parent_id: 0,
+    })));
   }
 
   if (action === "get_vod_categories") {
-    const categorias = await prisma.filme.groupBy({
+    const cats = await prisma.filme.groupBy({
       by: ["categoria"],
       where: { status: "Ativo" },
+      orderBy: { categoria: "asc" },
     });
 
-    return Response.json(
-      categorias.map((c, index) => ({
-        category_id: String(index + 1),
-        category_name: c.categoria || "Filmes",
-        parent_id: 0,
-      }))
-    );
+    return Response.json(cats.map((c) => ({
+      category_id: categoriaId(c.categoria),
+      category_name: c.categoria || "Filmes",
+      parent_id: 0,
+    })));
   }
 
   if (action === "get_series_categories") {
-    const categorias = await prisma.serie.groupBy({
+    const cats = await prisma.serie.groupBy({
       by: ["categoria"],
       where: { status: "Ativo" },
+      orderBy: { categoria: "asc" },
     });
 
-    return Response.json(
-      categorias.map((c, index) => ({
-        category_id: String(index + 1),
-        category_name: c.categoria || "Séries",
-        parent_id: 0,
-      }))
-    );
+    return Response.json(cats.map((c) => ({
+      category_id: categoriaId(c.categoria),
+      category_name: c.categoria || "Séries",
+      parent_id: 0,
+    })));
   }
 
   if (action === "get_live_streams") {
     const canais = await prisma.canal.findMany({
       where: { status: "Ativo" },
-      take: 5000,
+      take: 10000,
       orderBy: { nome: "asc" },
     });
 
-    return Response.json(
-      canais.map((c, index) => ({
-        num: index + 1,
-        name: c.nome,
-        stream_type: "live",
-        stream_id: c.id,
-        stream_icon: c.logo || "",
-        epg_channel_id: c.epgId || "",
-        added: "",
-        category_id: "1",
-        custom_sid: "",
-        tv_archive: 0,
-        direct_source: c.url,
-        tv_archive_duration: 0,
-      }))
-    );
+    return Response.json(canais.map((c, index) => ({
+      num: index + 1,
+      name: c.nome,
+      stream_type: "live",
+      stream_id: c.id,
+      stream_icon: c.logo || "",
+      epg_channel_id: c.epgId || "",
+      added: "",
+      category_id: categoriaId(c.categoria),
+      custom_sid: "",
+      tv_archive: 0,
+      direct_source: "",
+      tv_archive_duration: 0,
+    })));
   }
 
   if (action === "get_vod_streams") {
     const filmes = await prisma.filme.findMany({
       where: { status: "Ativo" },
-      take: 5000,
+      take: 10000,
       orderBy: { nome: "asc" },
     });
 
-    return Response.json(
-      filmes.map((f, index) => ({
-        num: index + 1,
-        name: f.nome,
-        stream_type: "movie",
-        stream_id: f.id,
-        stream_icon: f.capa || "",
-        rating: String(f.nota || ""),
-        rating_5based: f.nota ? Number(f.nota) / 2 : 0,
-        added: "",
-        category_id: "1",
-        container_extension: "mp4",
-        custom_sid: "",
-        direct_source: f.url,
-      }))
-    );
+    return Response.json(filmes.map((f, index) => ({
+      num: index + 1,
+      name: f.nome,
+      stream_type: "movie",
+      stream_id: f.id,
+      stream_icon: f.capa || "",
+      rating: String(f.nota || ""),
+      rating_5based: f.nota ? Number(f.nota) / 2 : 0,
+      added: "",
+      category_id: categoriaId(f.categoria),
+      container_extension: "mp4",
+      custom_sid: "",
+      direct_source: "",
+    })));
   }
 
   if (action === "get_series") {
     const series = await prisma.serie.findMany({
       where: { status: "Ativo" },
-      take: 5000,
+      take: 10000,
       orderBy: { nome: "asc" },
     });
 
@@ -178,11 +178,13 @@ export async function GET(request) {
         .replace(/\bS\d{1,2}E\d{1,3}\b/gi, "")
         .trim();
 
+      const idSerie = s.tmdbId || s.id;
+
       if (!mapa.has(nomeBase)) {
         mapa.set(nomeBase, {
           num: mapa.size + 1,
           name: nomeBase,
-          series_id: s.tmdbId || s.id,
+          series_id: idSerie,
           cover: s.capa || "",
           plot: s.sinopse || "",
           cast: "",
@@ -195,7 +197,7 @@ export async function GET(request) {
           backdrop_path: [],
           youtube_trailer: "",
           episode_run_time: "0",
-          category_id: "1",
+          category_id: categoriaId(s.categoria),
         });
       }
     }
