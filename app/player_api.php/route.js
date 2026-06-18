@@ -135,7 +135,7 @@ export async function GET(request) {
       category_id: categoriaId(c.categoria),
       custom_sid: "",
       tv_archive: 0,
-      direct_source: `${base}/stream/${c.id}.ts`,
+      direct_source: c.url || "",
       tv_archive_duration: 0,
     })));
   }
