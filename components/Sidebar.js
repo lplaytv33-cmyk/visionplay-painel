@@ -14,6 +14,7 @@ const menu = [
       ["Categorias", "/dashboard/categorias"],
       ["Bouquets", "/dashboard/bouquets"],
       ["Importar M3U", "/dashboard/importar-m3u"],
+      ["Exclusão em Massa", "/dashboard/exclusao-massa"],
       ["Exportar M3U", "/dashboard/exportar-m3u"],
       ["Atualizar TMDB", "/dashboard/tmdb"],
       ["Atualizar EPG", "/dashboard/epg"],
