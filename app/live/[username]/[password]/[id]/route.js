@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 
 export async function GET(request, { params }) {
   const { username, password, id } = await params;
@@ -17,5 +16,5 @@ export async function GET(request, { params }) {
 
   if (!canal?.url) return new Response("Not found", { status: 404 });
 
-  redirect(canal.url);
+  return Response.redirect(canal.url, 302);
 }
