@@ -135,7 +135,7 @@ export async function GET(request) {
       category_id: categoriaId(c.categoria),
       custom_sid: "",
       tv_archive: 0,
-      direct_source: c.url || "",
+      direct_source: `${base}/live/${username}/${password}/${c.id}.ts`,
       tv_archive_duration: 0,
     })));
   }
@@ -159,7 +159,7 @@ export async function GET(request) {
       category_id: categoriaId(f.categoria),
       container_extension: "mp4",
       custom_sid: "",
-      direct_source: "",
+      direct_source: `${base}/movie/${username}/${password}/${f.id}.mp4`,
     })));
   }
 
