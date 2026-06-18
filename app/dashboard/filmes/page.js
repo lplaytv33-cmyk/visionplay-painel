@@ -4,175 +4,147 @@ import { useEffect, useState } from "react";
 
 export default function FilmesPage() {
   const [filmes, setFilmes] = useState([]);
-  const [modal, setModal] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [busca, setBusca] = useState("");
 
-  async function carregarFilmes() {
-    const resposta = await fetch("/api/filmes");
-    const dados = await resposta.json();
-    setFilmes(dados);
+  async function carregarFilmes(page = pagina) {
+    const res = await fetch(
+      `/api/filmes?page=${page}&limit=50&busca=${encodeURIComponent(busca)}`
+    );
+
+    const dados = await res.json();
+
+    setFilmes(dados.items || []);
+    setTotalPages(dados.totalPages || 1);
+    setTotal(dados.total || 0);
   }
 
   useEffect(() => {
-    carregarFilmes();
+    carregarFilmes(1);
   }, []);
 
-  async function criarFilme(e) {
-    e.preventDefault();
-
-    const form = e.target;
-
-    await fetch("/api/filmes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        nome: form.nome.value,
-        categoria: form.categoria.value,
-        url: form.url.value,
-        capa: form.capa.value,
-      }),
-    });
-
-    form.reset();
-    setModal(false);
-    carregarFilmes();
+  async function pesquisar() {
+    setPagina(1);
+    await carregarFilmes(1);
   }
 
   async function excluirFilme(id) {
-    const confirmar = confirm("Deseja excluir este filme?");
-    if (!confirmar) return;
+    if (!confirm("Deseja excluir este filme?")) return;
 
     await fetch(`/api/filmes/${id}`, {
       method: "DELETE",
     });
 
-    carregarFilmes();
+    carregarFilmes(pagina);
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-black text-gray-800">Filmes</h1>
-          <p className="text-gray-500 mt-2">
-            Filmes salvos no banco de dados.
-          </p>
+
+      <div className="bg-white rounded-2xl border p-6">
+        <h1 className="text-2xl font-black">
+          Filmes
+        </h1>
+
+        <p className="text-gray-500 mt-2">
+          Total: {total.toLocaleString()}
+        </p>
+
+        <div className="flex gap-3 mt-4">
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar filme..."
+            className="border rounded-xl px-4 py-2 flex-1"
+          />
+
+          <button
+            onClick={pesquisar}
+            className="bg-red-600 text-white px-5 rounded-xl"
+          >
+            Buscar
+          </button>
         </div>
-
-        <button
-          onClick={() => setModal(true)}
-          className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold"
-        >
-          Novo Filme
-        </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
-        <Card title="Filmes" value={filmes.length} />
-        <Card title="Ativos" value={filmes.filter((f) => f.status === "Ativo").length} />
-        <Card title="Inativos" value={filmes.filter((f) => f.status === "Inativo").length} />
-        <Card title="Banco" value="Online" />
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border p-6 overflow-auto">
         <table className="w-full text-sm">
+
           <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="py-3">Nome</th>
-              <th>Categoria</th>
-              <th>URL</th>
-              <th>Status</th>
+            <tr className="border-b">
+              <th className="text-left py-3">Nome</th>
+              <th className="text-left">Categoria</th>
+              <th className="text-left">Status</th>
               <th className="text-right">Ações</th>
             </tr>
           </thead>
 
           <tbody>
             {filmes.map((filme) => (
-              <tr key={filme.id} className="border-b last:border-none">
-                <td className="py-4 font-bold text-gray-800">{filme.nome}</td>
-                <td>{filme.categoria}</td>
-                <td className="max-w-xs truncate text-gray-500">{filme.url}</td>
-                <td>
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                    {filme.status}
-                  </span>
+              <tr key={filme.id} className="border-b">
+
+                <td className="py-3 font-bold">
+                  {filme.nome}
                 </td>
+
+                <td>
+                  {filme.categoria}
+                </td>
+
+                <td>
+                  {filme.status}
+                </td>
+
                 <td className="text-right">
                   <button
                     onClick={() => excluirFilme(filme.id)}
-                    className="px-3 py-2 rounded-lg bg-red-100 text-red-600"
+                    className="bg-red-100 text-red-600 px-3 py-2 rounded-lg"
                   >
                     Excluir
                   </button>
                 </td>
+
               </tr>
             ))}
-
-            {filmes.length === 0 && (
-              <tr>
-                <td colSpan="5" className="py-8 text-center text-gray-500">
-                  Nenhum filme cadastrado.
-                </td>
-              </tr>
-            )}
           </tbody>
+
         </table>
       </div>
 
-      {modal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-xl p-8">
-            <h2 className="text-2xl font-black text-gray-800 mb-6">
-              Novo Filme
-            </h2>
+      <div className="flex justify-between items-center">
 
-            <form onSubmit={criarFilme} className="space-y-4">
-              <input name="nome" placeholder="Nome do filme" required className="input" />
-              <input name="categoria" placeholder="Categoria" required className="input" />
-              <input name="url" placeholder="URL do filme" required className="input" />
-              <input name="capa" placeholder="URL da capa" className="input" />
+        <button
+          disabled={pagina <= 1}
+          onClick={() => {
+            const p = pagina - 1;
+            setPagina(p);
+            carregarFilmes(p);
+          }}
+          className="bg-gray-200 px-4 py-2 rounded-xl"
+        >
+          Anterior
+        </button>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setModal(false)}
-                  className="px-5 py-3 rounded-xl bg-gray-100 font-bold"
-                >
-                  Cancelar
-                </button>
+        <span>
+          Página {pagina} de {totalPages}
+        </span>
 
-                <button className="px-5 py-3 rounded-xl bg-red-600 text-white font-bold">
-                  Salvar Filme
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        <button
+          disabled={pagina >= totalPages}
+          onClick={() => {
+            const p = pagina + 1;
+            setPagina(p);
+            carregarFilmes(p);
+          }}
+          className="bg-gray-200 px-4 py-2 rounded-xl"
+        >
+          Próxima
+        </button>
 
-      <style jsx>{`
-        .input {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 12px 16px;
-          outline: none;
-        }
+      </div>
 
-        .input:focus {
-          border-color: #ef4444;
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function Card({ title, value }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <h2 className="text-3xl font-black text-red-600 mt-2">{value}</h2>
     </div>
   );
 }
