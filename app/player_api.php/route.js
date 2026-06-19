@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { categoriasOrdenadas } from "@/app/api/categorias/ordenadas";
 
 function getBaseUrl(request) {
   const proto = request.headers.get("x-forwarded-proto") || "http";
@@ -76,43 +77,31 @@ export async function GET(request) {
   }
 
   if (action === "get_live_categories") {
-    const cats = await prisma.canal.groupBy({
-      by: ["categoria"],
-      where: { status: "Ativo" },
-      orderBy: { categoria: "asc" },
-    });
+    const cats = await categoriasOrdenadas("Canais");
 
     return Response.json(cats.map((c) => ({
-      category_id: categoriaId(c.categoria),
-      category_name: c.categoria || "Canais",
+      category_id: categoriaId(c.nome),
+      category_name: c.nome || "Canais",
       parent_id: 0,
     })));
   }
 
   if (action === "get_vod_categories") {
-    const cats = await prisma.filme.groupBy({
-      by: ["categoria"],
-      where: { status: "Ativo" },
-      orderBy: { categoria: "asc" },
-    });
+    const cats = await categoriasOrdenadas("Filmes");
 
     return Response.json(cats.map((c) => ({
-      category_id: categoriaId(c.categoria),
-      category_name: c.categoria || "Filmes",
+      category_id: categoriaId(c.nome),
+      category_name: c.nome || "Filmes",
       parent_id: 0,
     })));
   }
 
   if (action === "get_series_categories") {
-    const cats = await prisma.serie.groupBy({
-      by: ["categoria"],
-      where: { status: "Ativo" },
-      orderBy: { categoria: "asc" },
-    });
+    const cats = await categoriasOrdenadas("Séries");
 
     return Response.json(cats.map((c) => ({
-      category_id: categoriaId(c.categoria),
-      category_name: c.categoria || "Séries",
+      category_id: categoriaId(c.nome),
+      category_name: c.nome || "Séries",
       parent_id: 0,
     })));
   }

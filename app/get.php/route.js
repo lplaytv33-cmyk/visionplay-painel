@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { categoriasOrdenadas } from "@/app/api/categorias/ordenadas";
 
 function getBaseUrl(request) {
   const proto = request.headers.get("x-forwarded-proto") || "http";
@@ -46,20 +47,33 @@ export async function GET(request) {
     },
   });
 
-  const canais = await prisma.canal.findMany({
-    where: { status: "Ativo" },
-    orderBy: { nome: "asc" },
-  });
+  const catsCanais = await categoriasOrdenadas("Canais");
+  const catsFilmes = await categoriasOrdenadas("Filmes");
+  const catsSeries = await categoriasOrdenadas("Séries");
 
-  const filmes = await prisma.filme.findMany({
-    where: { status: "Ativo" },
-    orderBy: { nome: "asc" },
-  });
+  async function buscarPorCategorias(modelo, categorias) {
+    const resultado = [];
 
-  const series = await prisma.serie.findMany({
-    where: { status: "Ativo" },
-    orderBy: { nome: "asc" },
-  });
+    for (const cat of categorias) {
+      const itens = await modelo.findMany({
+        where: {
+          status: "Ativo",
+          categoria: cat.nome,
+        },
+        orderBy: {
+          nome: "asc",
+        },
+      });
+
+      resultado.push(...itens);
+    }
+
+    return resultado;
+  }
+
+  const canais = await buscarPorCategorias(prisma.canal, catsCanais);
+  const filmes = await buscarPorCategorias(prisma.filme, catsFilmes);
+  const series = await buscarPorCategorias(prisma.serie, catsSeries);
 
   let m3u = "#EXTM3U\n";
 
