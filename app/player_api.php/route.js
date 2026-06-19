@@ -130,7 +130,7 @@ export async function GET(request) {
       category_id: categoriaId(c.categoria),
       custom_sid: "",
       tv_archive: 0,
-      direct_source: `${process.env.NEXT_PUBLIC_STREAM_ENGINE || "http://187.77.61.76:8000"}/stream/${c.id}?url=${encodeURIComponent(c.url || "")}`,
+      direct_source: `${process.env.NEXT_PUBLIC_STREAM_ENGINE || "http://187.77.61.76:8000"}/live/${c.id}.ts`,
       tv_archive_duration: 0,
     })));
   }
