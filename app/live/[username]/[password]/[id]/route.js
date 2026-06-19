@@ -19,5 +19,23 @@ export async function GET(request, { params }) {
 
   if (!canal?.url) return new Response("Not found", { status: 404 });
 
-  return Response.redirect(canal.url, 302);
+  const upstream = await fetch(canal.url, {
+    headers: {
+      "User-Agent": request.headers.get("user-agent") || "VLC/3.0",
+      "Accept": "*/*",
+    },
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    return new Response("Canal offline", { status: 502 });
+  }
+
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": upstream.headers.get("content-type") || "video/mp2t",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
