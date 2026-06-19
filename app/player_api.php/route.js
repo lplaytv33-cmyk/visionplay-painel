@@ -194,5 +194,83 @@ export async function GET(request) {
     return Response.json([...mapa.values()]);
   }
 
+
+  if (action === "get_series_info") {
+    const seriesId = searchParams.get("series_id");
+
+    const episodios = await prisma.serie.findMany({
+      where: {
+        status: "Ativo",
+      },
+      orderBy: [
+        { temporada: "asc" },
+        { episodio: "asc" },
+      ],
+    });
+
+    const filtrados = episodios.filter((ep) => {
+      const nomeBase = ep.nome
+        .replace(/\bS\d{1,2}\s*E\d{1,3}\b/gi, "")
+        .replace(/\bS\d{1,2}E\d{1,3}\b/gi, "")
+        .trim();
+
+      const idSerie = String(ep.tmdbId || ep.id);
+      return idSerie === String(seriesId) || String(categoriaId(nomeBase)) === String(seriesId);
+    });
+
+    const info = filtrados[0] || null;
+    const episodes = {};
+
+    for (const ep of filtrados) {
+      const temporada = String(ep.temporada || 1);
+
+      if (!episodes[temporada]) {
+        episodes[temporada] = [];
+      }
+
+      episodes[temporada].push({
+        id: ep.id,
+        episode_num: ep.episodio || 1,
+        title: ep.nome,
+        container_extension: "mp4",
+        info: {
+          movie_image: ep.capa || "",
+          plot: ep.sinopse || "",
+          duration_secs: 0,
+          duration: "00:00:00",
+        },
+        custom_sid: "",
+        added: "",
+        season: ep.temporada || 1,
+        direct_source: `${base}/series/${username}/${password}/${ep.id}.mp4`,
+      });
+    }
+
+    return Response.json({
+      seasons: Object.keys(episodes).map((season) => ({
+        air_date: "",
+        episode_count: episodes[season].length,
+        id: Number(season),
+        name: `Temporada ${season}`,
+        overview: "",
+        season_number: Number(season),
+        cover: info?.capa || "",
+        cover_big: info?.capa || "",
+      })),
+      info: {
+        name: info?.nome || "",
+        cover: info?.capa || "",
+        plot: info?.sinopse || "",
+        cast: "",
+        director: "",
+        genre: info?.categoria || "",
+        releaseDate: info?.ano || "",
+        rating: String(info?.nota || ""),
+      },
+      episodes,
+    });
+  }
+
+
   return Response.json([]);
 }
