@@ -2,6 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { categoriasOrdenadas } from "@/app/api/categorias/ordenadas";
 
 function getBaseUrl(request) {
+  const envUrl = process.env.NEXT_PUBLIC_PANEL_URL;
+
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
   const proto = request.headers.get("x-forwarded-proto") || "http";
   const host = request.headers.get("host");
   return `${proto}://${host}`;
