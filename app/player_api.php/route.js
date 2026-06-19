@@ -70,10 +70,10 @@ export async function GET(request) {
         allowed_output_formats: ["m3u8", "ts", "mp4"],
       },
       server_info: {
-        url: request.headers.get("host"),
-        port: request.headers.get("host")?.split(":")[1] || "80",
+        url: "187.77.61.76",
+        port: "80",
         https_port: "443",
-        server_protocol: base.startsWith("https") ? "https" : "http",
+        server_protocol: "http",
         rtmp_port: "0",
         timezone: "America/Sao_Paulo",
         timestamp_now: Math.floor(Date.now() / 1000),
