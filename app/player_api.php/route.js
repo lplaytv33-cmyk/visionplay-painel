@@ -1,40 +1,42 @@
 import { prisma } from "@/lib/prisma";
 import { categoriasOrdenadas } from "@/app/api/categorias/ordenadas";
 
-function getBaseUrl(request) {
-  const envUrl = process.env.NEXT_PUBLIC_PANEL_URL;
+function getBaseUrl() {
+  return (process.env.NEXT_PUBLIC_PANEL_URL || "http://187.77.61.76").replace(/\/$/, "");
+}
 
-  if (envUrl) {
-    return envUrl.replace(/\/$/, "");
-  }
-
-  const proto = request.headers.get("x-forwarded-proto") || "http";
-  const host = request.headers.get("host");
-  return `${proto}://${host}`;
+function getStreamEngine() {
+  return (process.env.NEXT_PUBLIC_STREAM_ENGINE || "http://187.77.61.76:8000").replace(/\/$/, "");
 }
 
 async function autenticar(username, password) {
   if (!username || !password) return null;
 
   return prisma.cliente.findFirst({
-    where: {
-      usuario: username,
-      senha: password,
-      status: "Ativo",
-    },
+    where: { usuario: username, senha: password, status: "Ativo" },
   });
 }
 
 function categoriaId(nome) {
   let hash = 0;
   const texto = String(nome || "Sem Categoria");
-
   for (let i = 0; i < texto.length; i++) {
     hash = (hash << 5) - hash + texto.charCodeAt(i);
     hash |= 0;
   }
-
   return String(Math.abs(hash));
+}
+
+function nomeBaseSerie(nome) {
+  return String(nome || "")
+    .replace(/\bS\d{1,2}\s*E\d{1,3}\b/gi, "")
+    .replace(/\bS\d{1,2}E\d{1,3}\b/gi, "")
+    .replace(/\b\d{1,2}x\d{1,3}\b/gi, "")
+    .trim();
+}
+
+function serieKey(ep) {
+  return `${ep.categoria || ""}|${nomeBaseSerie(ep.nome)}`;
 }
 
 export async function GET(request) {
@@ -45,12 +47,13 @@ export async function GET(request) {
   const action = searchParams.get("action");
 
   const cliente = await autenticar(username, password);
-  const base = getBaseUrl(request);
+  const base = getBaseUrl();
+  const engine = getStreamEngine();
 
   if (!cliente) {
     return Response.json({
       user_info: { auth: 0, status: "Disabled" },
-      server_info: { url: base },
+      server_info: { url: "187.77.61.76", port: "80", server_protocol: "http" },
     });
   }
 
@@ -84,7 +87,6 @@ export async function GET(request) {
 
   if (action === "get_live_categories") {
     const cats = await categoriasOrdenadas("Canais");
-
     return Response.json(cats.map((c) => ({
       category_id: categoriaId(c.nome),
       category_name: c.nome || "Canais",
@@ -94,7 +96,6 @@ export async function GET(request) {
 
   if (action === "get_vod_categories") {
     const cats = await categoriasOrdenadas("Filmes");
-
     return Response.json(cats.map((c) => ({
       category_id: categoriaId(c.nome),
       category_name: c.nome || "Filmes",
@@ -104,7 +105,6 @@ export async function GET(request) {
 
   if (action === "get_series_categories") {
     const cats = await categoriasOrdenadas("Séries");
-
     return Response.json(cats.map((c) => ({
       category_id: categoriaId(c.nome),
       category_name: c.nome || "Séries",
@@ -115,7 +115,6 @@ export async function GET(request) {
   if (action === "get_live_streams") {
     const canais = await prisma.canal.findMany({
       where: { status: "Ativo" },
-      take: 10000,
       orderBy: { nome: "asc" },
     });
 
@@ -130,7 +129,7 @@ export async function GET(request) {
       category_id: categoriaId(c.categoria),
       custom_sid: "",
       tv_archive: 0,
-      direct_source: `${process.env.NEXT_PUBLIC_STREAM_ENGINE || "http://187.77.61.76:8000"}/live/${c.id}.ts`,
+      direct_source: `${engine}/live/${c.id}.ts`,
       tv_archive_duration: 0,
     })));
   }
@@ -138,7 +137,6 @@ export async function GET(request) {
   if (action === "get_vod_streams") {
     const filmes = await prisma.filme.findMany({
       where: { status: "Ativo" },
-      take: 10000,
       orderBy: { nome: "asc" },
     });
 
@@ -159,40 +157,39 @@ export async function GET(request) {
   }
 
   if (action === "get_series") {
-    const series = await prisma.serie.findMany({
+    const episodios = await prisma.serie.findMany({
       where: { status: "Ativo" },
-      take: 10000,
-      orderBy: { nome: "asc" },
+      orderBy: [
+        { nome: "asc" },
+        { temporada: "asc" },
+        { episodio: "asc" },
+      ],
     });
 
     const mapa = new Map();
 
-    for (const s of series) {
-      const nomeBase = s.nome
-        .replace(/\bS\d{1,2}\s*E\d{1,3}\b/gi, "")
-        .replace(/\bS\d{1,2}E\d{1,3}\b/gi, "")
-        .trim();
+    for (const ep of episodios) {
+      const nomeBase = nomeBaseSerie(ep.nome);
+      const idSerie = categoriaId(serieKey(ep));
 
-      const idSerie = s.tmdbId || s.id;
-
-      if (!mapa.has(nomeBase)) {
-        mapa.set(nomeBase, {
+      if (!mapa.has(idSerie)) {
+        mapa.set(idSerie, {
           num: mapa.size + 1,
           name: nomeBase,
           series_id: idSerie,
-          cover: s.capa || "",
-          plot: s.sinopse || "",
+          cover: ep.capa || "",
+          plot: ep.sinopse || "",
           cast: "",
           director: "",
-          genre: s.categoria || "",
-          releaseDate: s.ano || "",
+          genre: ep.categoria || "",
+          releaseDate: ep.ano || "",
           last_modified: "",
-          rating: String(s.nota || ""),
-          rating_5based: s.nota ? Number(s.nota) / 2 : 0,
+          rating: String(ep.nota || ""),
+          rating_5based: ep.nota ? Number(ep.nota) / 2 : 0,
           backdrop_path: [],
           youtube_trailer: "",
           episode_run_time: "0",
-          category_id: categoriaId(s.categoria),
+          category_id: categoriaId(ep.categoria),
         });
       }
     }
@@ -200,39 +197,25 @@ export async function GET(request) {
     return Response.json([...mapa.values()]);
   }
 
-
   if (action === "get_series_info") {
-    const seriesId = searchParams.get("series_id");
+    const seriesId = String(searchParams.get("series_id") || "");
 
     const episodios = await prisma.serie.findMany({
-      where: {
-        status: "Ativo",
-      },
+      where: { status: "Ativo" },
       orderBy: [
         { temporada: "asc" },
         { episodio: "asc" },
       ],
     });
 
-    const filtrados = episodios.filter((ep) => {
-      const nomeBase = ep.nome
-        .replace(/\bS\d{1,2}\s*E\d{1,3}\b/gi, "")
-        .replace(/\bS\d{1,2}E\d{1,3}\b/gi, "")
-        .trim();
-
-      const idSerie = String(ep.tmdbId || ep.id);
-      return idSerie === String(seriesId) || String(categoriaId(nomeBase)) === String(seriesId);
-    });
+    const filtrados = episodios.filter((ep) => String(categoriaId(serieKey(ep))) === seriesId);
 
     const info = filtrados[0] || null;
     const episodes = {};
 
     for (const ep of filtrados) {
       const temporada = String(ep.temporada || 1);
-
-      if (!episodes[temporada]) {
-        episodes[temporada] = [];
-      }
+      if (!episodes[temporada]) episodes[temporada] = [];
 
       episodes[temporada].push({
         id: ep.id,
@@ -264,7 +247,7 @@ export async function GET(request) {
         cover_big: info?.capa || "",
       })),
       info: {
-        name: info?.nome || "",
+        name: nomeBaseSerie(info?.nome || ""),
         cover: info?.capa || "",
         plot: info?.sinopse || "",
         cast: "",
@@ -276,7 +259,6 @@ export async function GET(request) {
       episodes,
     });
   }
-
 
   return Response.json([]);
 }
