@@ -79,7 +79,7 @@ export async function GET(request) {
 
   for (const canal of canais) {
     m3u += `#EXTINF:-1 tvg-id="${canal.epgId || ""}" tvg-name="${canal.nome}" tvg-logo="${canal.logo || ""}" group-title="${canal.categoria || "Canais"}",${canal.nome}\n`;
-    m3u += `${canal.url}\n`;
+    m3u += `${process.env.NEXT_PUBLIC_STREAM_ENGINE || "http://187.77.61.76:8000"}/live/${canal.id}.ts\n`;
   }
 
   for (const filme of filmes) {
