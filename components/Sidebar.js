@@ -19,6 +19,7 @@ const menu = [
       ["Atualizar TMDB", "/dashboard/tmdb"],
       ["Atualizar EPG", "/dashboard/epg"],
       ["Conexões Ativas", "/dashboard/conexoes-ativas"],
+      ["Monitor de Streams", "/dashboard/stream-status"],
     ],
   ],
   [
