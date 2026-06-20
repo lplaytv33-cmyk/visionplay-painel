@@ -1,13 +1,43 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const conexoes = await prisma.conexaoAtiva.findMany({
-    take: 200,
-    orderBy: {
-      id: "desc",
-    },
-  });
+  try {
+    const resp = await fetch("http://127.0.0.1:8000/status", {
+      cache: "no-store",
+    });
 
-  return NextResponse.json(conexoes);
+    const dados = await resp.json();
+
+    const conexoes = [];
+
+    for (const canal of dados.canais || []) {
+      for (const c of canal.conexoes || []) {
+        conexoes.push({
+          id: `${canal.id}-${c.usuario}-${c.ip}`,
+          cliente: c.cliente,
+          usuario: c.usuario,
+          ip: c.ip,
+          canal: canal.nome,
+          userAgent: c.userAgent,
+          tempo: c.conectadoHaSegundos,
+          status: "Online",
+        });
+      }
+    }
+
+    return NextResponse.json({
+      ativos: dados.ativos || 0,
+      totalClientes: dados.totalClientes || 0,
+      usuarios: dados.usuarios || [],
+      conexoes,
+    });
+  } catch (error) {
+    return NextResponse.json({
+      ativos: 0,
+      totalClientes: 0,
+      usuarios: [],
+      conexoes: [],
+      erro: "Stream Engine offline",
+    });
+  }
 }
