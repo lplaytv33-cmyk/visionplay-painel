@@ -3,9 +3,18 @@
 import { useEffect, useState } from "react";
 
 export default function TMDBPage() {
+  const [config, setConfig] = useState(null);
   const [status, setStatus] = useState(null);
   const [resposta, setResposta] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [tmdbToken, setTmdbToken] = useState("");
+
+  async function carregarConfig() {
+    const resp = await fetch("/api/configuracoes");
+    const dados = await resp.json();
+    setConfig(dados);
+    setTmdbToken(dados.tmdbToken || "");
+  }
 
   async function carregarStatus() {
     const resp = await fetch("/api/tmdb/status");
@@ -14,8 +23,24 @@ export default function TMDBPage() {
   }
 
   useEffect(() => {
+    carregarConfig();
     carregarStatus();
   }, []);
+
+  async function salvarToken() {
+    if (!config) return;
+
+    const resp = await fetch("/api/configuracoes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...config, tmdbToken }),
+    });
+
+    if (!resp.ok) return alert("Erro ao salvar token TMDB.");
+
+    alert("Token TMDB salvo com sucesso.");
+    carregarConfig();
+  }
 
   async function atualizar() {
     setLoading(true);
@@ -30,19 +55,38 @@ export default function TMDBPage() {
   }
 
   const total = (status?.filmesTotal || 0) + (status?.seriesTotal || 0);
-  const atualizados = (status?.filmesAtualizados || 0) + (status?.seriesAtualizadas || 0);
-  const progresso = total ? Math.round((atualizados / total) * 100) : 0;
+  const ok = (status?.filmesAtualizados || 0) + (status?.seriesAtualizadas || 0);
+  const progresso = total ? Math.round((ok / total) * 100) : 0;
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border p-8">
-        <h1 className="text-3xl font-black">Atualizar TMDB</h1>
+        <h1 className="text-3xl font-black">TMDB Profissional</h1>
         <p className="text-gray-500 mt-2">
           Atualize capas, sinopses, ano e notas de filmes e séries.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl border p-8 space-y-5">
+        <div>
+          <label className="font-bold text-gray-700">Token / API Key TMDB</label>
+          <div className="flex gap-3 mt-2">
+            <input
+              value={tmdbToken}
+              onChange={(e) => setTmdbToken(e.target.value)}
+              placeholder="Cole seu token ou API key do TMDB"
+              className="input"
+            />
+
+            <button
+              onClick={salvarToken}
+              className="bg-gray-900 text-white px-5 py-3 rounded-xl font-black"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+
         <div>
           <div className="flex justify-between font-bold mb-2">
             <span>Progresso TMDB</span>
@@ -57,7 +101,7 @@ export default function TMDBPage() {
           </div>
 
           <p className="text-sm text-gray-500 mt-2">
-            Atualizados: {atualizados.toLocaleString()} / {total.toLocaleString()}
+            Atualizados: {ok.toLocaleString()} / {total.toLocaleString()}
           </p>
         </div>
 
@@ -82,6 +126,20 @@ export default function TMDBPage() {
           </pre>
         )}
       </div>
+
+      <style jsx>{`
+        .input {
+          width: 100%;
+          border: 1px solid #d1d5db;
+          border-radius: 12px;
+          padding: 12px 16px;
+          outline: none;
+        }
+
+        .input:focus {
+          border-color: #ef4444;
+        }
+      `}</style>
     </div>
   );
 }
@@ -90,7 +148,9 @@ function Card({ title, value }) {
   return (
     <div className="bg-gray-50 rounded-xl border p-4">
       <p className="text-gray-500 text-sm">{title}</p>
-      <h2 className="text-2xl font-black text-red-600">{Number(value).toLocaleString()}</h2>
+      <h2 className="text-2xl font-black text-red-600">
+        {Number(value || 0).toLocaleString()}
+      </h2>
     </div>
   );
 }
