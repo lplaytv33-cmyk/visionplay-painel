@@ -18,6 +18,37 @@ export default function MonitorCanaisPage() {
     setLoading(false);
   }
 
+  async function desativarOffline() {
+    const offline = dados?.canais?.filter((c) => c.status === "Offline") || [];
+
+    if (offline.length === 0) {
+      alert("Nenhum canal offline nesta página.");
+      return;
+    }
+
+    if (!confirm(`Desativar ${offline.length} canais offline desta página?`)) return;
+
+    const resp = await fetch("/api/monitor-canais/desativar-offline", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ids: offline.map((c) => c.id),
+      }),
+    });
+
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      alert(json.error || "Erro ao desativar canais.");
+      return;
+    }
+
+    alert(`Canais desativados: ${json.alterados}`);
+    verificar(pagina);
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border p-8 flex justify-between items-center">
@@ -28,13 +59,23 @@ export default function MonitorCanaisPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => verificar(1)}
-          disabled={loading}
-          className="bg-red-600 text-white px-5 py-3 rounded-xl font-black"
-        >
-          {loading ? "Verificando..." : "Verificar 50 canais"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => verificar(1)}
+            disabled={loading}
+            className="bg-red-600 text-white px-5 py-3 rounded-xl font-black"
+          >
+            {loading ? "Verificando..." : "Verificar 50 canais"}
+          </button>
+
+          <button
+            onClick={desativarOffline}
+            disabled={!dados || loading}
+            className="bg-gray-900 text-white px-5 py-3 rounded-xl font-black disabled:opacity-50"
+          >
+            Desativar Offline
+          </button>
+        </div>
       </div>
 
       {dados && (
