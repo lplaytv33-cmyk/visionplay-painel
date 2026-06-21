@@ -20,6 +20,7 @@ const menu = [
       ["Atualizar EPG", "/dashboard/epg"],
       ["Conexões Ativas", "/dashboard/conexoes-ativas"],
       ["Monitor de Streams", "/dashboard/stream-status"],
+      ["Monitor de Canais", "/dashboard/monitor-canais"],
       ["Top Canais", "/dashboard/top-canais"],
     ],
   ],
